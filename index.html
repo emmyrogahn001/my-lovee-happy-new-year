@@ -1,0 +1,414 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>For My Love</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700&family=Great+Vibes&family=Montserrat:wght@300;400&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    
+    <style>
+        /* --- 1. RESET & VARIABLES --- */
+        :root {
+            --bg-dark: #050a14;
+            --envelope-main: #1e293b;
+            --envelope-flap: #2a3b55;
+            --gold-accent: #d4af37;
+            --paper-color: #fdfbf7;
+            --text-color: #1a1a1a;
+            --font-display: 'Cinzel', serif;
+            --font-hand: 'Great Vibes', cursive;
+            --font-body: 'Montserrat', sans-serif;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            height: 100vh;
+            width: 100vw;
+            background: radial-gradient(circle at bottom, #1b2735 0%, #090a0f 100%);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            overflow: hidden;
+            font-family: var(--font-body);
+        }
+
+        #canvas {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            z-index: 1; pointer-events: none;
+        }
+
+        /* --- 2. ENVELOPE STRUCTURE --- */
+        .wrapper {
+            position: relative;
+            width: 300px;
+            height: 200px;
+            z-index: 10;
+            perspective: 1000px;
+            /* Smooth transition for moving the envelope down */
+            transition: transform 0.6s cubic-bezier(0.2, 0.8, 0.2, 1);
+        }
+
+        .envelope {
+            position: relative; width: 100%; height: 100%;
+            background: var(--envelope-main); border-radius: 8px;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.8);
+            z-index: 10;
+        }
+
+        .lid {
+            position: absolute; top: 0; left: 0; width: 100%; height: 50%;
+            background: var(--envelope-flap);
+            clip-path: polygon(0 0, 100% 0, 50% 100%);
+            transform-origin: top;
+            transition: transform 0.6s 0.2s cubic-bezier(0.4, 0, 0.2, 1), z-index 0.2s 0.2s;
+            z-index: 40; border-top: 1px solid rgba(255,255,255,0.1);
+        }
+
+        .pocket {
+            position: absolute; bottom: 0; left: 0; width: 100%; height: 100%;
+            background: var(--envelope-main);
+            clip-path: polygon(0 0, 50% 55%, 100% 0, 100% 100%, 0 100%);
+            z-index: 30; border-radius: 0 0 8px 8px;
+            border-top: 1px solid rgba(255,255,255,0.05); pointer-events: none;
+        }
+
+        .seal {
+            position: absolute; top: 55%; left: 50%; transform: translate(-50%, -50%);
+            width: 55px; height: 55px; background: radial-gradient(circle, #ffd700, #b8860b);
+            border-radius: 50%; box-shadow: 0 4px 15px rgba(0,0,0,0.5), inset 0 2px 5px rgba(255,255,255,0.4);
+            z-index: 50; cursor: pointer; display: flex; justify-content: center; align-items: center;
+            border: 3px solid #916802; transition: transform 0.2s;
+        }
+        .seal:active { transform: translate(-50%, -50%) scale(0.9); }
+        .seal-text { font-family: var(--font-display); font-weight: bold; color: #5c4001; font-size: 12px; pointer-events: none; }
+
+        /* --- 3. THE LETTER --- */
+        .letter {
+            position: absolute;
+            bottom: 0; /* Anchored to bottom initially */
+            left: 5%;
+            width: 90%;
+            height: 95%; /* Initial height inside envelope */
+            background: var(--paper-color);
+            border-radius: 4px;
+            display: flex;
+            flex-direction: column;
+            padding: 20px;
+            box-sizing: border-box;
+            box-shadow: 0 -5px 15px rgba(0,0,0,0.1);
+            transition: all 0.8s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            z-index: 20;
+            transform: translateY(0);
+            opacity: 0;
+        }
+
+        .letter::after {
+            content: ''; position: absolute; top: 10px; left: 10px; right: 10px; bottom: 10px;
+            border: 2px solid #b8860b; opacity: 0.4; pointer-events: none; z-index: 25;
+        }
+
+        /* Scrollable content inside the letter */
+        .letter-content {
+            width: 100%; height: 100%; overflow-y: auto; text-align: center;
+            padding: 10px; scrollbar-width: none; z-index: 30;
+        }
+        .letter-content::-webkit-scrollbar { display: none; }
+
+        .letter h1 {
+            font-family: var(--font-display); color: #b8860b; font-size: 1.5rem;
+            margin-bottom: 15px; text-transform: uppercase; letter-spacing: 1px; margin-top: 10px;
+        }
+        .letter p {
+            font-family: var(--font-body); font-size: 0.95rem; color: #333; line-height: 1.6; margin-bottom: 20px;
+        }
+        .letter .signature {
+            font-family: var(--font-hand); font-size: 1.6rem; color: #1a1a1a; margin-top: 10px; margin-bottom: 20px;
+        }
+
+        /* --- 4. PLAYER --- */
+        .custom-player {
+            opacity: 0; transition: opacity 2s ease-in; margin-top: 20px;
+            width: 100%; display: flex; align-items: center; justify-content: center;
+            gap: 15px; padding: 15px 10px; border-top: 1px solid rgba(184, 134, 11, 0.3);
+            pointer-events: none; padding-bottom: 40px; /* Extra space at bottom */
+        }
+        .custom-player.visible { opacity: 1; pointer-events: auto; }
+        .play-btn {
+            width: 40px; height: 40px; border-radius: 50%; background: #b8860b;
+            color: white; border: none; cursor: pointer; display: flex; justify-content: center;
+            align-items: center; box-shadow: 0 4px 10px rgba(0,0,0,0.2); transition: transform 0.2s;
+        }
+        .song-info { text-align: left; }
+        .song-title { font-family: var(--font-display); font-size: 0.9rem; color: #b8860b; font-weight: bold; }
+        .song-artist { font-family: var(--font-body); font-size: 0.7rem; color: #666; }
+        .equalizer { display: flex; gap: 3px; height: 15px; align-items: flex-end; }
+        .bar { width: 3px; background: #b8860b; height: 5px; transition: height 0.2s; }
+        .playing .bar { animation: bounce 1s infinite ease-in-out; }
+        .playing .bar:nth-child(2) { animation-delay: 0.2s; }
+        .playing .bar:nth-child(3) { animation-delay: 0.4s; }
+        @keyframes bounce { 0%, 100% { height: 5px; } 50% { height: 15px; } }
+        .tap-instruction {
+            position: absolute; bottom: -50px; width: 100%; text-align: center;
+            color: rgba(255,255,255,0.5); font-size: 0.8rem; letter-spacing: 1px;
+            animation: pulse 2s infinite;
+        }
+
+        /* --- 5. ANIMATIONS (Desktop Default) --- */
+        .wrapper.open .lid { transform: rotateX(180deg); z-index: 5; }
+        .wrapper.open .seal { transform: translate(-50%, -50%) scale(0); opacity: 0; pointer-events: none; }
+        .wrapper.open .tap-instruction { opacity: 0; }
+        
+        /* Desktop: Standard Slide Up */
+        .wrapper.open .letter {
+            opacity: 1;
+            z-index: 60;
+            transform: translateY(-80px);
+            height: 400px;
+        }
+
+        /* --- 6. CRITICAL MOBILE FIXES --- */
+        @media (max-width: 600px) {
+            
+            /* Step 1: When opened, move the WHOLE ENVELOPE DOWN.
+               This creates space at the top of the screen.
+            */
+            .wrapper.open {
+                transform: translateY(80px); /* Move down 80px */
+            }
+
+            /* Step 2: Slide the letter UP relative to the envelope.
+               Since the envelope moved down, the letter stays centered on screen.
+            */
+            .wrapper.open .letter {
+                height: 380px; /* Fixed safe height for mobile */
+                transform: translateY(-130px); /* Slide out of the pocket */
+            }
+
+            .letter h1 { font-size: 1.3rem; }
+        }
+
+        /* Extra Safety for small iPhones (SE, etc) */
+        @media (max-height: 650px) {
+             .wrapper.open { transform: translateY(60px); }
+             .wrapper.open .letter { height: 320px; transform: translateY(-100px); }
+        }
+
+        @keyframes pulse { 0%, 100% { opacity: 0.5; } 50% { opacity: 0.8; } }
+    </style>
+</head>
+<body>
+    <canvas id="canvas"></canvas>
+    <div class="wrapper">
+        <div class="envelope">
+            <div class="lid"></div>
+            <div class="letter">
+                <div class="letter-content">
+                    <h1>Happy 2026!</h1>
+                    <p>
+                        Hello! My lovee Happy New Year!
+Gusto ko lang sabihin na Mahal na mahal kitaa
+Tatlong taon na din tayo mahal ko, we have so many ups and downs sa relationship natin this year may times na hindi na tayo nag kakaintidihans, at pag tatalo ng sobra and sorry sa mga times na nag nag a-away tayo mahal, naway wag na tayo mag talo sa 2026 hehez. It may not be the great year for us, but we made it, and I love you more now than I did when the year started and and I'm happy I get to start another year with you.
+                        <br><br>
+                        "Palagi" means always, and that is how long I want to be by your side.
+                        <br><br>
+                        Here’s to our new beginnings!
+                    </p>
+                    <div class="signature">With love, James Dexter</div>
+
+                    <audio id="myAudio" src="palagi.mp3" preload="auto"></audio>
+                    <div class="custom-player" id="custom-player">
+                        <button class="play-btn" onclick="toggleMusic()">
+                            <i class="fas fa-play" id="play-icon"></i>
+                        </button>
+                        <div class="song-info">
+                            <div class="song-title">Palagi</div>
+                            <div class="song-artist">TJ Monterde</div>
+                        </div>
+                        <div class="equalizer" id="eq">
+                            <div class="bar"></div>
+                            <div class="bar"></div>
+                            <div class="bar"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="pocket"></div>
+            <div class="seal" onclick="openEnvelope()">
+                <div class="seal-text">OPEN</div>
+            </div>
+        </div>
+        <div class="tap-instruction">Tap the Seal</div>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d');
+        const wrapper = document.querySelector('.wrapper');
+        let cw = window.innerWidth;
+        let ch = window.innerHeight;
+        let fireworks = [];
+        let particles = [];
+        let isOpen = false;
+
+        const audio = document.getElementById('myAudio');
+        const playIcon = document.getElementById('play-icon');
+        const eq = document.getElementById('eq');
+
+        function toggleMusic() {
+            if (audio.paused) {
+                audio.play();
+                playIcon.classList.remove('fa-play');
+                playIcon.classList.add('fa-pause');
+                eq.classList.add('playing');
+            } else {
+                audio.pause();
+                playIcon.classList.add('fa-play');
+                playIcon.classList.remove('fa-pause');
+                eq.classList.remove('playing');
+            }
+        }
+
+        canvas.width = cw;
+        canvas.height = ch;
+        window.addEventListener('resize', () => {
+            cw = window.innerWidth;
+            ch = window.innerHeight;
+            canvas.width = cw;
+            canvas.height = ch;
+        });
+
+        const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        function playExplosion() {
+            if (audioCtx.state === 'suspended') audioCtx.resume();
+            const t = audioCtx.currentTime;
+            const oscillator = audioCtx.createOscillator();
+            const gainNode = audioCtx.createGain();
+            const filter = audioCtx.createBiquadFilter();
+            const bufferSize = audioCtx.sampleRate * 2; 
+            const buffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
+            const data = buffer.getChannelData(0);
+            for (let i = 0; i < bufferSize; i++) data[i] = Math.random() * 2 - 1;
+            const noise = audioCtx.createBufferSource();
+            noise.buffer = buffer;
+            filter.type = 'lowpass';
+            filter.frequency.setValueAtTime(400, t);
+            filter.frequency.exponentialRampToValueAtTime(10, t + 1);
+            gainNode.gain.setValueAtTime(1, t);
+            gainNode.gain.exponentialRampToValueAtTime(0.01, t + 1);
+            noise.connect(filter);
+            filter.connect(gainNode);
+            gainNode.connect(audioCtx.destination);
+            noise.start(t);
+            noise.stop(t + 1);
+        }
+
+        class Firework {
+            constructor(sx, sy, tx, ty) {
+                this.x = sx; this.y = sy; this.sx = sx; this.sy = sy;
+                this.tx = tx; this.ty = ty;
+                this.distanceToTarget = Math.hypot(sx - tx, sy - ty);
+                this.distanceTraveled = 0;
+                this.coordinates = [];
+                this.coordinateCount = 3;
+                while(this.coordinateCount--) this.coordinates.push([this.x, this.y]);
+                this.angle = Math.atan2(ty - sy, tx - sx);
+                this.speed = 2;
+                this.acceleration = 1.05;
+                this.brightness = Math.random() * 50 + 50;
+                this.targetRadius = 1;
+            }
+            update(index) {
+                this.coordinates.pop();
+                this.coordinates.unshift([this.x, this.y]);
+                if(this.targetRadius < 8) this.targetRadius += 0.3; else this.targetRadius = 1;
+                this.speed *= this.acceleration;
+                const vx = Math.cos(this.angle) * this.speed;
+                const vy = Math.sin(this.angle) * this.speed;
+                this.distanceTraveled = Math.hypot(this.sx - (this.x + vx), this.sy - (this.y + vy));
+                if(this.distanceTraveled >= this.distanceToTarget) {
+                    createParticles(this.tx, this.ty);
+                    fireworks.splice(index, 1);
+                    playExplosion();
+                } else { this.x += vx; this.y += vy; }
+            }
+            draw() {
+                ctx.beginPath();
+                ctx.moveTo(this.coordinates[this.coordinates.length - 1][0], this.coordinates[this.coordinates.length - 1][1]);
+                ctx.lineTo(this.x, this.y);
+                ctx.strokeStyle = 'hsl(' + Math.random()*360 + ', 100%, ' + this.brightness + '%)';
+                ctx.stroke();
+            }
+        }
+
+        class Particle {
+            constructor(x, y) {
+                this.x = x; this.y = y;
+                this.coordinates = [];
+                this.coordinateCount = 5;
+                while(this.coordinateCount--) this.coordinates.push([this.x, this.y]);
+                this.angle = Math.random() * Math.PI * 2;
+                this.speed = Math.random() * 10 + 1;
+                this.friction = 0.95;
+                this.gravity = 1;
+                this.hue = Math.random() * 360;
+                this.brightness = Math.random() * 50 + 50;
+                this.alpha = 1;
+                this.decay = Math.random() * 0.015 + 0.015;
+            }
+            update(index) {
+                this.coordinates.pop();
+                this.coordinates.unshift([this.x, this.y]);
+                this.speed *= this.friction;
+                this.x += Math.cos(this.angle) * this.speed;
+                this.y += Math.sin(this.angle) * this.speed + this.gravity;
+                this.alpha -= this.decay;
+                if(this.alpha <= this.decay) particles.splice(index, 1);
+            }
+            draw() {
+                ctx.beginPath();
+                ctx.moveTo(this.coordinates[this.coordinates.length - 1][0], this.coordinates[this.coordinates.length - 1][1]);
+                ctx.lineTo(this.x, this.y);
+                ctx.strokeStyle = 'hsla(' + this.hue + ', 100%, ' + this.brightness + '%, ' + this.alpha + ')';
+                ctx.stroke();
+            }
+        }
+
+        function createParticles(x, y) {
+            let particleCount = 30;
+            while(particleCount--) particles.push(new Particle(x, y));
+        }
+
+        function loop() {
+            if (!isOpen) return;
+            requestAnimationFrame(loop);
+            ctx.globalCompositeOperation = 'destination-out';
+            ctx.fillStyle = 'rgba(0, 0, 0, 0.5)';
+            ctx.fillRect(0, 0, cw, ch);
+            ctx.globalCompositeOperation = 'lighter';
+            let i = fireworks.length;
+            while(i--) { fireworks[i].draw(); fireworks[i].update(i); }
+            let j = particles.length;
+            while(j--) { particles[j].draw(); particles[j].update(j); }
+            if(Math.random() < 0.05) fireworks.push(new Firework(cw / 2, ch, Math.random() * cw, Math.random() * ch / 2));
+        }
+
+        function openEnvelope() {
+            if (isOpen) return;
+            isOpen = true;
+            wrapper.classList.add('open');
+            if (audioCtx.state === 'suspended') audioCtx.resume();
+            
+            loop();
+            setTimeout(() => {
+                const player = document.getElementById('custom-player');
+                player.classList.add('visible');
+                toggleMusic();
+            }, 5000);
+        }
+    </script>
+</body>
+</html>
